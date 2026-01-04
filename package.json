@@ -9,10 +9,19 @@
     "web": "expo start --web"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^1.24.0",
     "expo": "~53.0.22",
+    "expo-crypto": "~14.0.1",
+    "expo-sqlite": "~15.0.1",
     "expo-status-bar": "~2.2.3",
     "react": "19.0.0",
-    "react-native": "0.79.6"
+    "react-native": "0.79.6",
+    "react-native-elements": "^3.4.3",
+    "react-native-gesture-handler": "^2.14.0",
+    "react-native-webview": "13.13.5",
+    "react-dom": "19.0.0",
+    "react-native-web": "^0.20.0",
+    "@expo/metro-runtime": "~5.0.5"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"
