@@ -18,7 +18,6 @@ import { getFavorites, removeFavorite } from '../lib/favorites';
 import { getMovieTrailer, getMovieTrailerFromDb } from '../lib/movies';
 import MenuBar from './MenuBar';
 
-// Умовний імпорт WebView для мобільних платформ
 let WebView = null;
 if (Platform.OS !== 'web') {
   try {
@@ -55,22 +54,18 @@ const ProfileScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
     setSelectedMovie(movie);
   };
 
-  // Конвертувати YouTube URL в embed URL
   const convertToEmbedUrl = (url) => {
     if (!url) return null;
     
-    // Вже embed URL
     if (url.includes('youtube.com/embed/')) {
       return url;
     }
     
-    // YouTube watch URL
     const watchMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]{11})/);
     if (watchMatch) {
       return `https://www.youtube.com/embed/${watchMatch[1]}?autoplay=1&rel=0`;
     }
     
-    // YouTube embed URL без повного посилання
     const embedMatch = url.match(/youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/);
     if (embedMatch) {
       return `https://www.youtube.com/embed/${embedMatch[1]}?autoplay=1&rel=0`;
@@ -82,13 +77,11 @@ const ProfileScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
   const handleWatchTrailer = async (movie) => {
     setLoadingTrailer(true);
     try {
-      // Спочатку перевіряємо збережене посилання на трейлер
       let trailer = null;
       if (movie.id) {
         trailer = await getMovieTrailerFromDb(movie.id);
       }
 
-      // Якщо немає збереженого посилання, шукаємо через TMDB API
       if (!trailer || !trailer.url) {
         const tmdbId = movie.tmdbId || movie.tmdb_id;
         if (tmdbId) {
@@ -100,7 +93,6 @@ const ProfileScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
         }
       }
 
-      // Якщо є збережене посилання або знайдено через API
       if (trailer && trailer.url) {
         const embedUrl = convertToEmbedUrl(trailer.url);
         if (embedUrl) {

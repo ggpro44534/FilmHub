@@ -33,7 +33,6 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
 
   useEffect(() => {
     loadMovies();
-    // Видалити всі фільми при першому завантаженні (один раз)
     const deleteMoviesOnce = async () => {
       try {
         const hasDeleted = await AsyncStorage.getItem('movies_deleted_once');
@@ -130,10 +129,8 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
       return;
     }
 
-    // Валідація YouTube посилання
     let trailerUrl = editedMovie.trailerUrl?.trim() || '';
     if (trailerUrl) {
-      // Перевіряємо, чи це валідне YouTube посилання
       const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([a-zA-Z0-9_-]{11})/;
       if (!youtubeRegex.test(trailerUrl)) {
         Alert.alert('Chyba', 'Prosím, zadejte platné YouTube odkaz (např. https://www.youtube.com/watch?v=...)');

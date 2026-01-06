@@ -18,7 +18,6 @@ import MenuBar from './MenuBar';
 const { width, height } = Dimensions.get('window');
 const SWIPE_THRESHOLD = 120;
 
-// Функція для отримання адаптивних значень
 const getResponsiveValue = (mobile, tablet, desktop) => {
   if (width >= 1024) return desktop;
   if (width >= 768) return tablet;
@@ -166,7 +165,6 @@ const MainScreen = ({ user, onLogout, onSwitchToAdmin, onSwitchToProfile, onNavi
     } else if (screen === 'profile') {
       onSwitchToProfile();
     } else if (screen === 'main') {
-      // Already on main
     }
   };
 
@@ -277,7 +275,6 @@ const MainScreen = ({ user, onLogout, onSwitchToAdmin, onSwitchToProfile, onNavi
   );
 };
 
-// Створюємо стилі з урахуванням розміру екрану
 const createStyles = () => {
   const isDesktop = width >= 1024;
   const isTablet = width >= 768;
@@ -447,7 +444,7 @@ const createStyles = () => {
     shadowRadius: 3.84,
     elevation: 5,
     ...(isDesktop && Platform.OS === 'web' && {
-      display: 'none', // На десктопі веб меню завжди відкрите
+      display: 'none',
     }),
   },
   menuButtonText: {

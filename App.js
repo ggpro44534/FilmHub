@@ -20,7 +20,6 @@ export default function App() {
         await checkUser();
       } catch (error) {
         console.error('Error initializing app:', error);
-        // На веб-платформі SQLite не працює, але це не критично
         if (Platform.OS !== 'web') {
           console.error('Database initialization failed:', error);
         }
