@@ -118,7 +118,7 @@ const AuthScreen = ({ onAuthSuccess }) => {
                 style={styles.logoImage}
                 resizeMode="contain"
               />
-              <Text style={styles.logoText}>KinoPlatforma</Text>
+              <Text style={styles.logoText}>Cinevia</Text>
             </View>
 
             <Text style={styles.headline}>Pohodlné místo pro milovníky filmů</Text>

@@ -172,9 +172,7 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
     if (m) {
       try {
         await addFavorite(m);
-      } catch (e) {
-        console.error("addFavorite error:", e);
-      }
+      } catch (e) {}
     }
     animateOffscreen(1);
   }, [animateOffscreen, currentMovieIndex, movies]);
@@ -183,31 +181,25 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
     animateOffscreen(-1);
   }, [animateOffscreen]);
 
-  const onMove = useMemo(() => {
-    const handler = Animated.event([null, { dx: x }], {
-      useNativeDriver: canUseNativeDriver,
-      listener: (_, g) => {
-        const p = clamp(Math.abs(g.dx) / SWIPE_THRESHOLD(layout.w), 0, 1);
-        stackAnim.setValue(p);
-      },
-    });
-    return handler;
-  }, [layout.w, stackAnim, x]);
-
   const panResponder = useMemo(
     () =>
       PanResponder.create({
         onStartShouldSetPanResponder: () => true,
         onMoveShouldSetPanResponder: (_, g) => Math.abs(g.dx) > 3,
-        onPanResponderMove: onMove,
+        onPanResponderMove: (_, g) => {
+          x.setValue(g.dx);
+          const p = clamp(Math.abs(g.dx) / SWIPE_THRESHOLD(layout.w), 0, 1);
+          stackAnim.setValue(p);
+        },
         onPanResponderRelease: (_, g) => {
           const th = SWIPE_THRESHOLD(layout.w);
           if (g.dx > th) swipeRight();
           else if (g.dx < -th) swipeLeft();
           else resetPosition();
         },
+        onPanResponderTerminate: resetPosition,
       }),
-    [layout.w, onMove, resetPosition, swipeLeft, swipeRight]
+    [layout.w, resetPosition, stackAnim, swipeLeft, swipeRight, x]
   );
 
   useEffect(() => {
@@ -238,9 +230,7 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
     try {
       await signOut();
       onLogout?.();
-    } catch (e) {
-      console.error("logout error:", e);
-    }
+    } catch (e) {}
   }, [onLogout]);
 
   const handleNavigate = useCallback(
@@ -321,12 +311,7 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
         <StatusBar barStyle="light-content" />
         <PremiumBackground />
         <View style={styles.content}>
-          <TopBar 
-            showWelcome={showWelcome} 
-            email={user?.email} 
-            onMenu={() => setMenuOpen(true)}
-            onFaq={() => setFaqOpen(true)}
-          />
+          <TopBar showWelcome={showWelcome} email={user?.email} onMenu={() => setMenuOpen(true)} onFaq={() => setFaqOpen(true)} />
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyTitle}>Немає фільмів</Text>
             <TouchableOpacity style={styles.primaryBtn} onPress={loadMovies} activeOpacity={0.9}>
@@ -345,7 +330,7 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
       <PremiumBackground />
 
       <View style={styles.content}>
-        <TopBar showWelcome={showWelcome} email={user?.email} onMenu={() => setMenuOpen(true)} />
+        <TopBar showWelcome={showWelcome} email={user?.email} onMenu={() => setMenuOpen(true)} onFaq={() => setFaqOpen(true)} />
 
         <View style={styles.progressWrap}>
           <View style={styles.progressTrack} />
@@ -430,11 +415,11 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
           <CircleAction icon="✓" tone="ok" onPress={swipeRight} />
         </View>
 
-        <Text style={styles.hint}>{isWeb ? "A/D або ← →, R = random" : "Свайпни ліворуч / праворуч"}</Text>
+        <Text style={styles.hint}>{isWeb ? "A/D nebo ← →, R = nahodne" : "Prejed vlevo / vpravo"}</Text>
       </View>
 
       <MenuBar currentScreen="main" onNavigate={handleNavigate} user={user} onLogout={handleLogout} isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
-      
+
       <FaqModal isOpen={faqOpen} onClose={() => setFaqOpen(false)} />
     </View>
   );
@@ -451,121 +436,82 @@ function FaqModal({ isOpen, onClose }) {
       fadeAnim.setValue(0);
       slideAnim.setValue(50);
       Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 1,
-          duration: 300,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 0,
-          duration: 350,
-          easing: Easing.out(Easing.cubic),
-          useNativeDriver: true,
-        }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 350, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(fadeAnim, {
-          toValue: 0,
-          duration: 200,
-          useNativeDriver: true,
-        }),
-        Animated.timing(slideAnim, {
-          toValue: 50,
-          duration: 250,
-          useNativeDriver: true,
-        }),
-      ]).start(() => {
-        setVisible(false);
-      });
+        Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 50, duration: 250, useNativeDriver: true }),
+      ]).start(() => setVisible(false));
     }
-  }, [isOpen]);
+  }, [isOpen, fadeAnim, slideAnim]);
 
   if (!visible) return null;
 
   const faqItems = [
     {
       question: "Як користуватися додатком?",
-      answer: "Свайпніть картку фільму вліво, щоб пропустити, або вправо, щоб додати до улюблених. На комп'ютері використовуйте клавіші A/D або стрілки ← →. Натисніть R для випадкового фільму.",
+      answer:
+        "Свайпніть картку фільму вліво, щоб пропустити, або вправо, щоб додати до улюблених. На комп'ютері використовуйте клавіші A/D або стрілки ← →. Натисніть R для випадкового фільму.",
     },
     {
       question: "Як правильно свайпати фільми?",
-      answer: "На мобільному пристрої: проведіть пальцем вліво або вправо по картці фільму. На комп'ютері: використовуйте клавіші A (ліворуч), D (праворуч) або стрілки клавіатури. Ви також можете використовувати кнопки внизу екрана.",
+      answer:
+        "На мобільному пристрої: проведіть пальцем вліво або вправо по картці фільму. На комп'ютері: використовуйте клавіші A (ліворуч), D (праворуч) або стрілки клавіатури. Ви також можете використовувати кнопки внизу екрана.",
     },
     {
       question: "Як додати фільм до улюблених?",
-      answer: "Свайпніть картку фільму вправо або натисніть кнопку з галочкою (✓) внизу екрана. Фільм автоматично збережеться у вашому профілі.",
+      answer:
+        "Свайпніть картку фільму вправо або натисніть кнопку з галочкою (✓) внизу екрана. Фільм автоматично збережеться у вашому профілі.",
     },
     {
       question: "Як пропустити фільм?",
-      answer: "Свайпніть картку фільму вліво або натисніть кнопку з хрестиком (✕) внизу екрана. Фільм буде пропущено і ви побачите наступний.",
+      answer:
+        "Свайпніть картку фільму вліво або натисніть кнопку з хрестиком (✕) внизу екрана. Фільм буде пропущено і ви побачите наступний.",
     },
     {
       question: "Як переглянути мої улюблені фільми?",
-      answer: "Відкрийте меню (кнопка з трьома лініями справа вгорі) та перейдіть у розділ 'Profil', щоб побачити всі збережені фільми.",
+      answer:
+        "Відкрийте меню (кнопка з трьома лініями справа вгорі) та перейдіть у розділ 'Profil', щоб побачити всі збережені фільми.",
     },
     {
       question: "Як оновити список фільмів?",
-      answer: "Список фільмів оновлюється автоматично. Ви також можете натиснути кнопку оновлення (↺) внизу екрана для ручного оновлення.",
+      answer:
+        "Список фільмів оновлюється автоматично. Ви також можете натиснути кнопку оновлення (↺) внизу екрана для ручного оновлення.",
     },
     {
       question: "Що таке рейтинг фільму?",
-      answer: "Кожен фільм має рейтинг на основі оцінок користувачів (M) та даних з TMDB (The Movie Database). Рейтинг відображається на картці фільму.",
+      answer:
+        "Кожен фільм має рейтинг на основі оцінок користувачів (M) та даних з TMDB (The Movie Database). Рейтинг відображається на картці фільму.",
     },
     {
       question: "Як вибрати випадковий фільм?",
-      answer: "Натисніть кнопку оновлення (↺) внизу екрана або клавішу R на клавіатурі, щоб перейти до випадкового фільму зі списку.",
+      answer:
+        "Натисніть кнопку оновлення (↺) внизу екрана або клавішу R на клавіатурі, щоб перейти до випадкового фільму зі списку.",
     },
   ];
 
   return (
-    <Modal 
-      transparent 
-      visible={visible} 
-      animationType="none" 
-      onRequestClose={onClose}
-      statusBarTranslucent
-    >
+    <Modal transparent visible={visible} animationType="none" onRequestClose={onClose} statusBarTranslucent>
       <View style={faqStyles.container} pointerEvents="box-none">
-        <Pressable 
-          style={faqStyles.overlay} 
-          onPress={onClose}
-        >
+        <Pressable style={faqStyles.overlay} onPress={onClose}>
           <Animated.View style={{ opacity: fadeAnim }}>
             <View style={faqStyles.overlayBg} />
           </Animated.View>
         </Pressable>
-        
-        <Pressable 
-          onPress={(e) => e.stopPropagation()}
-          style={{ width: '100%', alignItems: 'center' }}
-        >
-          <Animated.View
-            style={[
-              faqStyles.modal,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
+
+        <Pressable onPress={(e) => e.stopPropagation()} style={{ width: "100%", alignItems: "center" }}>
+          <Animated.View style={[faqStyles.modal, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
             <BlurView intensity={20} tint="dark" style={faqStyles.blur}>
               <View style={faqStyles.header}>
                 <Text style={faqStyles.title}>Допомога та FAQ</Text>
-                <TouchableOpacity 
-                  onPress={onClose} 
-                  style={faqStyles.closeBtn}
-                  activeOpacity={0.7}
-                >
+                <TouchableOpacity onPress={onClose} style={faqStyles.closeBtn} activeOpacity={0.7}>
                   <Text style={faqStyles.closeText}>×</Text>
                 </TouchableOpacity>
               </View>
-            
-              <ScrollView 
-                style={faqStyles.content} 
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: 20 }}
-              >
+
+              <ScrollView style={faqStyles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
                 {faqItems.map((item, index) => (
                   <View key={index} style={faqStyles.item}>
                     <Text style={faqStyles.question}>{item.question}</Text>
@@ -600,26 +546,16 @@ function PremiumBackground() {
 }
 
 function TopBar({ showWelcome, email, onMenu, onFaq }) {
-  const handleFaqPress = () => {
-    if (onFaq) {
-      onFaq();
-    }
-  };
-
   return (
     <View style={topStyles.wrap}>
-      <TouchableOpacity 
-        style={topStyles.leftBtn} 
-        onPress={handleFaqPress} 
-        activeOpacity={0.9}
-      >
+      <TouchableOpacity style={topStyles.leftBtn} onPress={onFaq} activeOpacity={0.9}>
         <View style={topStyles.infoCircle}>
           <Text style={topStyles.infoText}>?</Text>
         </View>
       </TouchableOpacity>
 
       <View style={topStyles.center}>
-        <Text style={topStyles.brand}>moviso</Text>
+        <Text style={topStyles.brand}>Cinevia</Text>
       </View>
 
       <TouchableOpacity style={topStyles.menuBtn} onPress={onMenu} activeOpacity={0.9}>
@@ -654,13 +590,7 @@ function PosterStage({ uri, chips = [], dim = false }) {
   return (
     <View style={posterStyles.wrap}>
       <View style={[posterStyles.poster, dim && { opacity: 0.9 }]}>
-        <Image
-          source={{ uri }}
-          style={posterStyles.img}
-          resizeMode="contain"
-          fadeDuration={180}
-          progressiveRenderingEnabled
-        />
+        <Image source={{ uri }} style={posterStyles.img} resizeMode="contain" fadeDuration={180} progressiveRenderingEnabled />
         <LinearGradient colors={["rgba(0,0,0,0.10)", "rgba(0,0,0,0.52)"]} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={posterStyles.shade} />
         <View style={posterStyles.chipsRow}>
           {chips.slice(0, 2).map((t, idx) => (
@@ -814,17 +744,6 @@ const topStyles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  rightBtn: {
-    width: 48,
-    height: 48,
-    borderRadius: 999,
-    overflow: "hidden",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.10)",
-    backgroundColor: "rgba(255,255,255,0.06)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
   infoCircle: { width: 28, height: 28, borderRadius: 999, borderWidth: 2, borderColor: "rgba(255,255,255,0.55)", alignItems: "center", justifyContent: "center" },
   infoText: { color: soft(0.88), fontWeight: "900", fontSize: 14, marginTop: -1 },
 
@@ -933,21 +852,9 @@ const actionStyles = StyleSheet.create({
 });
 
 const faqStyles = StyleSheet.create({
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    zIndex: 0,
-  },
-  overlayBg: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0, 0, 0, 0.75)",
-  },
-  container: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    padding: 20,
-    zIndex: 1,
-  },
+  overlay: { ...StyleSheet.absoluteFillObject, zIndex: 0 },
+  overlayBg: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0, 0, 0, 0.75)" },
+  container: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20, zIndex: 1 },
   modal: {
     width: "100%",
     maxWidth: 600,
@@ -962,10 +869,7 @@ const faqStyles = StyleSheet.create({
     shadowRadius: 30,
     elevation: 20,
   },
-  blur: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(10, 10, 12, 0.95)",
-  },
+  blur: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(10, 10, 12, 0.95)" },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -975,12 +879,7 @@ const faqStyles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: "rgba(255, 255, 255, 0.1)",
   },
-  title: {
-    color: soft(0.95),
-    fontSize: 22,
-    fontWeight: "900",
-    letterSpacing: 0.3,
-  },
+  title: { color: soft(0.95), fontSize: 22, fontWeight: "900", letterSpacing: 0.3 },
   closeBtn: {
     width: 36,
     height: 36,
@@ -991,34 +890,11 @@ const faqStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: "rgba(255, 255, 255, 0.1)",
   },
-  closeText: {
-    color: soft(0.9),
-    fontSize: 24,
-    fontWeight: "300",
-    lineHeight: 24,
-  },
-  content: {
-    padding: 20,
-  },
-  item: {
-    marginBottom: 24,
-    paddingBottom: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.05)",
-  },
-  question: {
-    color: soft(0.95),
-    fontSize: 16,
-    fontWeight: "800",
-    marginBottom: 10,
-    letterSpacing: 0.2,
-  },
-  answer: {
-    color: soft(0.7),
-    fontSize: 14,
-    fontWeight: "600",
-    lineHeight: 20,
-  },
+  closeText: { color: soft(0.9), fontSize: 24, fontWeight: "300", lineHeight: 24 },
+  content: { padding: 20 },
+  item: { marginBottom: 24, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: "rgba(255, 255, 255, 0.05)" },
+  question: { color: soft(0.95), fontSize: 16, fontWeight: "800", marginBottom: 10, letterSpacing: 0.2 },
+  answer: { color: soft(0.7), fontSize: 14, fontWeight: "600", lineHeight: 20 },
 });
 
 function truncate(s, max) {

@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "FilmHub",
-    "slug": "FilmHub",
+    "name": "Cinevia",
+    "slug": "cinevia",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.filmhub.app"
+      "bundleIdentifier": "com.cinevia.app"
     },
     "android": {
       "adaptiveIcon": {
@@ -27,12 +27,12 @@
         "ACCESS_NETWORK_STATE"
       ],
       "usesCleartextTraffic": false,
-      "package": "com.filmhub.app"
+      "package": "com.cinevia.app"
     },
     "web": {
       "favicon": "./logo.jpg",
       "bundler": "metro",
-      "name": "FilmHub",
+      "name": "Cinevia",
       "build": {
         "babel": {
           "include": [
@@ -40,6 +40,12 @@
           ]
         }
       }
-    }
+    },
+    "extra": {
+      "eas": {
+        "projectId": "d4249cb6-1b56-4dba-b736-b1801a202354"
+      }
+    },
+    "owner": "ivanenkob"
   }
 }

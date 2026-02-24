@@ -13,11 +13,12 @@ import {
   Image,
 } from "react-native";
 
-const { width } = Dimensions.get("window");
-const isDesktop = width >= 1024;
-const isTablet = width >= 768;
-
-const MENU_WIDTH = isDesktop ? 320 : isTablet ? 300 : 280;
+const getMenuWidth = () => {
+  const { width } = Dimensions.get("window");
+  const isDesktop = width >= 1024;
+  const isTablet = width >= 768;
+  return isDesktop ? 320 : isTablet ? 300 : 280;
+};
 
 const COLORS = {
   panel: "rgba(10,10,12,0.95)",
@@ -39,9 +40,19 @@ export default function MenuBar({
   isOpen,
   onClose,
 }) {
-  const slideAnim = useRef(new Animated.Value(MENU_WIDTH)).current;
+  const [menuWidth, setMenuWidth] = useState(getMenuWidth());
+  const slideAnim = useRef(new Animated.Value(getMenuWidth())).current;
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const [modalVisible, setModalVisible] = useState(false);
+
+  useEffect(() => {
+    const sub = Dimensions.addEventListener?.("change", () => {
+      const w = getMenuWidth();
+      setMenuWidth(w);
+      if (!isOpen) slideAnim.setValue(w);
+    });
+    return () => sub?.remove?.();
+  }, [isOpen, slideAnim]);
 
   const items = useMemo(
     () => [
@@ -80,12 +91,12 @@ export default function MenuBar({
         useNativeDriver: true,
       }),
       Animated.timing(slideAnim, {
-        toValue: MENU_WIDTH,
+        toValue: menuWidth,
         duration: 220,
         useNativeDriver: true,
       }),
     ]).start(() => setModalVisible(false));
-  }, [isOpen]);
+  }, [isOpen, fadeAnim, slideAnim, menuWidth]);
 
   const handlePress = (id) => {
     if (id === "logout") {
@@ -102,6 +113,8 @@ export default function MenuBar({
       ? { backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)" }
       : null;
 
+  const isDesktop = Dimensions.get("window").width >= 1024;
+
   return (
     <Modal
       visible={modalVisible}
@@ -117,7 +130,7 @@ export default function MenuBar({
         <Animated.View
           style={[
             styles.drawer,
-            { width: MENU_WIDTH, transform: [{ translateX: slideAnim }] },
+            { width: menuWidth, transform: [{ translateX: slideAnim }] },
           ]}
         >
           <Pressable style={[styles.panel, webGlass]} onPress={() => {}}>
@@ -129,7 +142,9 @@ export default function MenuBar({
                   resizeMode="cover"
                 />
                 <View>
-                  <Text style={styles.appName}>KinoPlatforma</Text>
+                  <Text style={[styles.appName, { fontSize: isDesktop ? 20 : 18 }]}>
+                    Cinevia
+                  </Text>
                   <Text style={styles.sub}>
                     {user?.role === "admin"
                       ? "Režim administrátora"
@@ -183,7 +198,7 @@ export default function MenuBar({
             </ScrollView>
 
             <View style={styles.footer}>
-              <Text style={styles.footerText}>© KinoPlatforma</Text>
+              <Text style={styles.footerText}>© Cinevia</Text>
             </View>
           </Pressable>
         </Animated.View>
@@ -235,7 +250,6 @@ const styles = StyleSheet.create({
   },
   appName: {
     color: COLORS.text,
-    fontSize: isDesktop ? 20 : 18,
     fontWeight: "900",
   },
   sub: {
@@ -264,7 +278,7 @@ const styles = StyleSheet.create({
   item: {
     flexDirection: "row",
     alignItems: "center",
-    paddingVertical: isDesktop ? 14 : 13,
+    paddingVertical: 13,
     paddingHorizontal: 14,
     borderRadius: 14,
     marginBottom: 8,
@@ -294,7 +308,7 @@ const styles = StyleSheet.create({
   itemText: {
     flex: 1,
     color: "rgba(255,255,255,0.86)",
-    fontSize: isDesktop ? 16 : 15,
+    fontSize: 15,
     fontWeight: "700",
   },
   itemTextActive: {
