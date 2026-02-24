@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -8,201 +8,310 @@ import {
   Modal,
   Dimensions,
   Platform,
-} from 'react-native';
+  Animated,
+  Pressable,
+  Image,
+} from "react-native";
 
-const { width } = Dimensions.get('window');
+const { width } = Dimensions.get("window");
 const isDesktop = width >= 1024;
 const isTablet = width >= 768;
-const MENU_WIDTH = isDesktop ? 300 : isTablet ? 280 : 260;
 
-const MenuBar = ({ 
-  currentScreen, 
-  onNavigate, 
-  user, 
+const MENU_WIDTH = isDesktop ? 320 : isTablet ? 300 : 280;
+
+const COLORS = {
+  panel: "rgba(10,10,12,0.95)",
+  overlay: "rgba(0,0,0,0.62)",
+  border: "rgba(255,255,255,0.08)",
+  borderSoft: "rgba(255,255,255,0.06)",
+  text: "rgba(255,255,255,0.94)",
+  textDim: "rgba(255,255,255,0.62)",
+  accent: "#E50914",
+  accentSoft: "rgba(229,9,20,0.14)",
+  itemBg: "rgba(255,255,255,0.03)",
+};
+
+export default function MenuBar({
+  currentScreen,
+  onNavigate,
+  user,
   onLogout,
   isOpen,
   onClose,
-}) => {
-  const menuItems = [
-    { id: 'main', label: 'Filmy', icon: '🎬' },
-    { id: 'profile', label: 'Profil', icon: '👤' },
-    ...(user?.role === 'admin' ? [{ id: 'admin', label: 'Admin', icon: '⚙️' }] : []),
-    { id: 'logout', label: 'Odhlásit se', icon: '🚪' },
-  ];
+}) {
+  const slideAnim = useRef(new Animated.Value(MENU_WIDTH)).current;
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const [modalVisible, setModalVisible] = useState(false);
 
-  const handlePress = (itemId) => {
-    if (itemId === 'logout') {
-      onLogout();
-    } else {
-      onNavigate(itemId);
-    }
-    onClose();
-  };
-
-  const menuContent = (
-    <View style={styles.menuContainer}>
-      <View style={styles.logoContainer}>
-        <Text style={styles.logo}>KINO PLATFORMA</Text>
-        <TouchableOpacity style={styles.closeButton} onPress={onClose}>
-          <Text style={styles.closeButtonText}>✕</Text>
-        </TouchableOpacity>
-      </View>
-      
-      <ScrollView style={styles.menuList}>
-        {menuItems.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={[
-              styles.menuItem,
-              currentScreen === item.id && styles.menuItemActive,
-            ]}
-            onPress={() => handlePress(item.id)}
-          >
-            <Text style={styles.menuIcon}>{item.icon}</Text>
-            <Text
-              style={[
-                styles.menuText,
-                currentScreen === item.id && styles.menuTextActive,
-              ]}
-            >
-              {item.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
-    </View>
+  const items = useMemo(
+    () => [
+      { id: "main", label: "Filmy" },
+      { id: "profile", label: "Profil" },
+      ...(user?.role === "admin"
+        ? [{ id: "admin", label: "Administrace" }]
+        : []),
+      { id: "logout", label: "Odhlásit se" },
+    ],
+    [user?.role]
   );
 
-  if (Platform.OS === 'web' && width >= 768) {
-    return (
-      <View style={styles.menuContainer}>
-        <View style={styles.logoContainer}>
-          <Text style={styles.logo}>KINO PLATFORMA</Text>
-        </View>
-        
-        <ScrollView style={styles.menuList}>
-          {menuItems.map((item) => (
-            <TouchableOpacity
-              key={item.id}
-              style={[
-                styles.menuItem,
-                currentScreen === item.id && styles.menuItemActive,
-              ]}
-              onPress={() => handlePress(item.id)}
-            >
-              <Text style={styles.menuIcon}>{item.icon}</Text>
-              <Text
-                style={[
-                  styles.menuText,
-                  currentScreen === item.id && styles.menuTextActive,
-                ]}
-              >
-                {item.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
-      </View>
-    );
-  }
+  useEffect(() => {
+    if (isOpen) {
+      setModalVisible(true);
+      Animated.parallel([
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 160,
+          useNativeDriver: true,
+        }),
+        Animated.timing(slideAnim, {
+          toValue: 0,
+          duration: 240,
+          useNativeDriver: true,
+        }),
+      ]).start();
+      return;
+    }
+
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 140,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: MENU_WIDTH,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+    ]).start(() => setModalVisible(false));
+  }, [isOpen]);
+
+  const handlePress = (id) => {
+    if (id === "logout") {
+      onLogout?.();
+      onClose?.();
+      return;
+    }
+    onNavigate?.(id);
+    onClose?.();
+  };
+
+  const webGlass =
+    Platform.OS === "web"
+      ? { backdropFilter: "blur(14px)", WebkitBackdropFilter: "blur(14px)" }
+      : null;
 
   return (
     <Modal
-      visible={isOpen}
-      transparent={true}
-      animationType="slide"
+      visible={modalVisible}
+      transparent
+      animationType="none"
       onRequestClose={onClose}
     >
-      <TouchableOpacity
-        style={styles.overlay}
-        activeOpacity={1}
-        onPress={onClose}
-      >
-        <View style={styles.menuWrapper}>
-          <TouchableOpacity activeOpacity={1} onPress={(e) => e.stopPropagation()}>
-            {menuContent}
-          </TouchableOpacity>
-        </View>
-      </TouchableOpacity>
+      <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      </Animated.View>
+
+      <View style={styles.wrapper} pointerEvents="box-none">
+        <Animated.View
+          style={[
+            styles.drawer,
+            { width: MENU_WIDTH, transform: [{ translateX: slideAnim }] },
+          ]}
+        >
+          <Pressable style={[styles.panel, webGlass]} onPress={() => {}}>
+            <View style={styles.header}>
+              <View style={styles.brand}>
+                <Image
+                  source={require("../assets/logo.jpg")}
+                  style={styles.logo}
+                  resizeMode="cover"
+                />
+                <View>
+                  <Text style={styles.appName}>KinoPlatforma</Text>
+                  <Text style={styles.sub}>
+                    {user?.role === "admin"
+                      ? "Režim administrátora"
+                      : "Objevuj • Swipe • Ulož"}
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                onPress={onClose}
+                activeOpacity={0.75}
+                hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                style={styles.close}
+              >
+                <Text style={styles.closeText}>×</Text>
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView
+              contentContainerStyle={styles.list}
+              showsVerticalScrollIndicator={false}
+            >
+              {items.map((item) => {
+                const active = currentScreen === item.id;
+                const logout = item.id === "logout";
+
+                return (
+                  <TouchableOpacity
+                    key={item.id}
+                    onPress={() => handlePress(item.id)}
+                    activeOpacity={0.78}
+                    style={[
+                      styles.item,
+                      active && styles.itemActive,
+                      logout && styles.itemLogout,
+                    ]}
+                  >
+                    <View style={[styles.rail, active && styles.railOn]} />
+                    <Text
+                      style={[
+                        styles.itemText,
+                        active && styles.itemTextActive,
+                        logout && styles.itemTextLogout,
+                      ]}
+                    >
+                      {item.label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            <View style={styles.footer}>
+              <Text style={styles.footerText}>© KinoPlatforma</Text>
+            </View>
+          </Pressable>
+        </Animated.View>
+      </View>
     </Modal>
   );
-};
+}
 
 const styles = StyleSheet.create({
   overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: COLORS.overlay,
+  },
+  wrapper: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-start',
+    flexDirection: "row",
+    justifyContent: "flex-end",
   },
-  menuWrapper: {
-    flexDirection: 'row',
-    height: '100%',
+  drawer: {
+    height: "100%",
   },
-  menuContainer: {
-    width: MENU_WIDTH,
-    backgroundColor: '#1a1a1a',
-    borderRightWidth: 1,
-    borderRightColor: '#333',
-    paddingTop: Platform.OS === 'web' ? 60 : 20,
-    height: '100%',
+  panel: {
+    flex: 1,
+    backgroundColor: COLORS.panel,
+    borderLeftWidth: 1,
+    borderLeftColor: COLORS.border,
+    paddingTop: Platform.OS === "web" ? 56 : 46,
   },
-  logoContainer: {
-    padding: 20,
+  header: {
+    paddingHorizontal: 18,
+    paddingBottom: 16,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
     borderBottomWidth: 1,
-    borderBottomColor: '#333',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    borderBottomColor: COLORS.borderSoft,
+  },
+  brand: {
+    flexDirection: "row",
+    alignItems: "center",
   },
   logo: {
-    fontSize: isDesktop ? 18 : isTablet ? 17 : 16,
-    fontWeight: 'bold',
-    color: '#e50914',
-    letterSpacing: 1,
+    width: 42,
+    height: 42,
+    borderRadius: 14,
+    marginRight: 14,
+    borderWidth: 0.5,
+    borderColor: "rgba(255,255,255,0.08)",
+  },
+  appName: {
+    color: COLORS.text,
+    fontSize: isDesktop ? 20 : 18,
+    fontWeight: "900",
+  },
+  sub: {
+    color: COLORS.textDim,
+    fontSize: 13,
+  },
+  close: {
+    width: 38,
+    height: 38,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    backgroundColor: "rgba(255,255,255,0.04)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  closeText: {
+    color: "rgba(255,255,255,0.86)",
+    fontSize: 24,
+    fontWeight: "300",
+  },
+  list: {
+    padding: 12,
+    paddingTop: 14,
+  },
+  item: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: isDesktop ? 14 : 13,
+    paddingHorizontal: 14,
+    borderRadius: 14,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.05)",
+    backgroundColor: COLORS.itemBg,
+  },
+  itemActive: {
+    backgroundColor: COLORS.accentSoft,
+    borderColor: "rgba(229,9,20,0.26)",
+  },
+  itemLogout: {
+    marginTop: 6,
+    backgroundColor: "rgba(229,9,20,0.10)",
+    borderColor: "rgba(229,9,20,0.22)",
+  },
+  rail: {
+    width: 3,
+    height: 18,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.14)",
+    marginRight: 10,
+  },
+  railOn: {
+    backgroundColor: COLORS.accent,
+  },
+  itemText: {
     flex: 1,
+    color: "rgba(255,255,255,0.86)",
+    fontSize: isDesktop ? 16 : 15,
+    fontWeight: "700",
   },
-  closeButton: {
-    width: 30,
-    height: 30,
-    justifyContent: 'center',
-    alignItems: 'center',
-    ...(Platform.OS === 'web' && { display: 'none' }),
+  itemTextActive: {
+    color: "rgba(255,255,255,0.98)",
   },
-  closeButtonText: {
-    color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
+  itemTextLogout: {
+    color: "rgba(255,255,255,0.92)",
   },
-  menuList: {
-    flex: 1,
+  footer: {
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.borderSoft,
   },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: isDesktop ? 18 : isTablet ? 16 : 15,
-    paddingHorizontal: isDesktop ? 25 : isTablet ? 22 : 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#222',
-  },
-  menuItemActive: {
-    backgroundColor: '#2a2a2a',
-    borderLeftWidth: 3,
-    borderLeftColor: '#e50914',
-  },
-  menuIcon: {
-    fontSize: isDesktop ? 22 : isTablet ? 21 : 20,
-    marginRight: isDesktop ? 18 : isTablet ? 16 : 15,
-    width: isDesktop ? 35 : isTablet ? 32 : 30,
-  },
-  menuText: {
-    fontSize: isDesktop ? 18 : isTablet ? 17 : 16,
-    color: '#fff',
-    flex: 1,
-  },
-  menuTextActive: {
-    color: '#e50914',
-    fontWeight: 'bold',
+  footerText: {
+    color: "rgba(255,255,255,0.45)",
+    fontSize: 12,
+    fontWeight: "600",
   },
 });
-
-export default MenuBar;

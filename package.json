@@ -21,8 +21,12 @@
     "react-native": "0.79.6",
     "react-native-elements": "^3.4.3",
     "react-native-gesture-handler": "^2.14.0",
+    "react-native-paper": "^5.15.0",
+    "react-native-vector-icons": "^10.3.0",
     "react-native-web": "^0.20.0",
-    "react-native-webview": "13.13.5"
+    "react-native-webview": "13.13.5",
+    "expo-blur": "~14.1.5",
+    "expo-linear-gradient": "~14.1.5"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"

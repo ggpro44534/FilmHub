@@ -18,11 +18,6 @@ export default function App() {
       try {
         await initDatabase();
         await checkUser();
-      } catch (error) {
-        console.error('Error initializing app:', error);
-        if (Platform.OS !== 'web') {
-          console.error('Database initialization failed:', error);
-        }
       } finally {
         setLoading(false);
       }
@@ -33,13 +28,10 @@ export default function App() {
 
   const checkUser = async () => {
     try {
-      const { data, error } = await getSession();
-      if (error) {
-        console.error('Error checking user session:', error);
-      }
+      const { data } = await getSession();
       setUser(data?.session?.user ?? null);
     } catch (error) {
-      console.error('Error checking user session:', error);
+      setUser(null);
     }
   };
 
@@ -110,7 +102,6 @@ export default function App() {
     </View>
   );
 }
-
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -128,3 +119,4 @@ const styles = StyleSheet.create({
     fontSize: 18,
   },
 });
+

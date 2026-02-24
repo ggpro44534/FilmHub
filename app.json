@@ -30,7 +30,7 @@
       "package": "com.filmhub.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png",
+      "favicon": "./logo.jpg",
       "bundler": "metro",
       "name": "FilmHub",
       "build": {
