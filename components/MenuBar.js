@@ -58,9 +58,7 @@ export default function MenuBar({
     () => [
       { id: "main", label: "Filmy" },
       { id: "profile", label: "Profil" },
-      ...(user?.role === "admin"
-        ? [{ id: "admin", label: "Administrace" }]
-        : []),
+      ...(user?.role === "admin" ? [{ id: "admin", label: "Administrace" }] : []),
       { id: "logout", label: "Odhlásit se" },
     ],
     [user?.role]
@@ -95,7 +93,9 @@ export default function MenuBar({
         duration: 220,
         useNativeDriver: true,
       }),
-    ]).start(() => setModalVisible(false));
+    ]).start(() => {
+      requestAnimationFrame(() => setModalVisible(false));
+    });
   }, [isOpen, fadeAnim, slideAnim, menuWidth]);
 
   const handlePress = (id) => {

@@ -29,26 +29,26 @@ const canUseNativeDriver = !isWeb;
 const defaultMovies = [
   {
     id: "1",
-    title: "Harry Potter and the Philosopher's Stone",
+    title: "Harry Potter a Kámen mudrců",
     year: 2001,
     rating: 9.2,
     tmdb: 7.9,
     tmdbVotes: "29k",
     localVotes: 47,
-    genreTags: ["Пригоди", "Фентезі"],
-    director: "Кріс Коламбус",
+    genreTags: ["Dobrodružný", "Fantasy"],
+    director: "Chris Columbus",
     image:
       "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
   },
   {
     id: "2",
-    title: "Inception",
+    title: "Počátek (Inception)",
     year: 2010,
     rating: 8.8,
     tmdb: 8.7,
     tmdbVotes: "2.3M",
     localVotes: 183,
-    genreTags: ["Sci-Fi", "Action"],
+    genreTags: ["Sci-Fi", "Akční"],
     director: "Christopher Nolan",
     image:
       "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
@@ -218,6 +218,7 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
         onRandomRefresh();
       } else if (e.code === "Escape") {
         e.preventDefault();
+        setFaqOpen(false);
         resetPosition();
       }
     };
@@ -257,7 +258,9 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
       Animated.timing(x, { toValue: 0, duration: 120, easing: Easing.out(Easing.quad), useNativeDriver: canUseNativeDriver }),
       Animated.timing(stackAnim, { toValue: 0, duration: 120, easing: Easing.out(Easing.quad), useNativeDriver: canUseNativeDriver }),
     ]).start(() => {
-      setCurrentMovieIndex(next);
+      requestAnimationFrame(() => {
+        setCurrentMovieIndex(next);
+      });
       x.setValue(0);
       stackAnim.setValue(0);
     });
@@ -311,15 +314,16 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
         <StatusBar barStyle="light-content" />
         <PremiumBackground />
         <View style={styles.content}>
-          <TopBar showWelcome={showWelcome} email={user?.email} onMenu={() => setMenuOpen(true)} onFaq={() => setFaqOpen(true)} />
+          <TopBar showWelcome={showWelcome} email={user?.email} onMenu={() => setMenuOpen(true)} onFaq={() => setFaqOpen((v) => !v)} />
           <View style={styles.emptyWrap}>
-            <Text style={styles.emptyTitle}>Немає фільмів</Text>
+            <Text style={styles.emptyTitle}>Žádné filmy</Text>
             <TouchableOpacity style={styles.primaryBtn} onPress={loadMovies} activeOpacity={0.9}>
-              <Text style={styles.primaryBtnText}>Оновити</Text>
+              <Text style={styles.primaryBtnText}>Obnovit</Text>
             </TouchableOpacity>
           </View>
         </View>
         <MenuBar currentScreen="main" onNavigate={handleNavigate} user={user} onLogout={handleLogout} isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
+        <FaqModal isOpen={faqOpen} onClose={() => setFaqOpen(false)} />
       </View>
     );
   }
@@ -330,7 +334,7 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
       <PremiumBackground />
 
       <View style={styles.content}>
-        <TopBar showWelcome={showWelcome} email={user?.email} onMenu={() => setMenuOpen(true)} onFaq={() => setFaqOpen(true)} />
+        <TopBar showWelcome={showWelcome} email={user?.email} onMenu={() => setMenuOpen(true)} onFaq={() => setFaqOpen((v) => !v)} />
 
         <View style={styles.progressWrap}>
           <View style={styles.progressTrack} />
@@ -360,23 +364,16 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
             </Animated.View>
           )}
 
-          <Animated.View
-            {...panResponder.panHandlers}
-            style={[
-              styles.cardShell,
-              styles.cardFront,
-              { transform: [{ translateX: x }, { rotate }, { scale: frontScale }] },
-            ]}
-          >
+          <Animated.View {...panResponder.panHandlers} style={[styles.cardShell, styles.cardFront, { transform: [{ translateX: x }, { rotate }, { scale: frontScale }] }]}>
             <CardFrame>
               <Animated.View style={[styles.edgeGlowRight, { opacity: likeGlow }]} />
               <Animated.View style={[styles.edgeGlowLeft, { opacity: nopeGlow }]} />
 
               <Animated.View style={[styles.badge, styles.badgeLike, { opacity: badgeLikeOpacity }]}>
-                <Text style={styles.badgeText}>LIKE</Text>
+                <Text style={styles.badgeText}>LÍBÍ</Text>
               </Animated.View>
               <Animated.View style={[styles.badge, styles.badgeNope, { opacity: badgeNopeOpacity }]}>
-                <Text style={styles.badgeText}>NOPE</Text>
+                <Text style={styles.badgeText}>NE</Text>
               </Animated.View>
 
               <PosterStage uri={currentMovie.image} chips={currentMovie.genreTags} />
@@ -415,7 +412,7 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
           <CircleAction icon="✓" tone="ok" onPress={swipeRight} />
         </View>
 
-        <Text style={styles.hint}>{isWeb ? "A/D nebo ← →, R = nahodne" : "Prejed vlevo / vpravo"}</Text>
+        <Text style={styles.hint}>{isWeb ? "A/D nebo ← →, R = náhodně" : "Přejeď vlevo / vpravo"}</Text>
       </View>
 
       <MenuBar currentScreen="main" onNavigate={handleNavigate} user={user} onLogout={handleLogout} isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
@@ -427,23 +424,25 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
 
 function FaqModal({ isOpen, onClose }) {
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
+  const slideAnim = useRef(new Animated.Value(18)).current;
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     if (isOpen) {
       setVisible(true);
       fadeAnim.setValue(0);
-      slideAnim.setValue(50);
+      slideAnim.setValue(18);
       Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 0, duration: 350, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+        Animated.timing(fadeAnim, { toValue: 1, duration: 220, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 260, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       ]).start();
     } else {
       Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 0, duration: 200, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 50, duration: 250, useNativeDriver: true }),
-      ]).start(() => setVisible(false));
+        Animated.timing(fadeAnim, { toValue: 0, duration: 160, useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 18, duration: 180, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+      ]).start(() => {
+        requestAnimationFrame(() => setVisible(false));
+      });
     }
   }, [isOpen, fadeAnim, slideAnim]);
 
@@ -451,77 +450,64 @@ function FaqModal({ isOpen, onClose }) {
 
   const faqItems = [
     {
-      question: "Як користуватися додатком?",
+      question: "Jak aplikaci používat?",
       answer:
-        "Свайпніть картку фільму вліво, щоб пропустити, або вправо, щоб додати до улюблених. На комп'ютері використовуйте клавіші A/D або стрілки ← →. Натисніть R для випадкового фільму.",
+        "Přejeďte kartou filmu vlevo pro přeskočení nebo vpravo pro přidání do oblíbených. Na počítači použijte A/D nebo šipky ← →. Klávesa R vybere náhodný film.",
     },
     {
-      question: "Як правильно свайпати фільми?",
+      question: "Jak přidat film do oblíbených?",
       answer:
-        "На мобільному пристрої: проведіть пальцем вліво або вправо по картці фільму. На комп'ютері: використовуйте клавіші A (ліворуч), D (праворуч) або стрілки клавіатури. Ви також можете використовувати кнопки внизу екрана.",
+        "Přejeďte kartu filmu vpravo nebo klikněte na tlačítko s fajfkou (✓) dole. Film se uloží do vašeho profilu.",
     },
     {
-      question: "Як додати фільм до улюблених?",
+      question: "Jak film přeskočit?",
       answer:
-        "Свайпніть картку фільму вправо або натисніть кнопку з галочкою (✓) внизу екрана. Фільм автоматично збережеться у вашому профілі.",
+        "Přejeďte kartu filmu vlevo nebo klikněte na tlačítko s křížkem (✕) dole. Zobrazí se další film.",
     },
     {
-      question: "Як пропустити фільм?",
+      question: "Kde najdu oblíbené filmy?",
       answer:
-        "Свайпніть картку фільму вліво або натисніть кнопку з хрестиком (✕) внизу екрана. Фільм буде пропущено і ви побачите наступний.",
+        "Otevřete menu (tlačítko se třemi čárkami vpravo nahoře) a přejděte do sekce „Profil“.",
     },
     {
-      question: "Як переглянути мої улюблені фільми?",
+      question: "Jak vybrat náhodný film?",
       answer:
-        "Відкрийте меню (кнопка з трьома лініями справа вгорі) та перейдіть у розділ 'Profil', щоб побачити всі збережені фільми.",
+        "Klikněte na (↺) dole nebo stiskněte klávesu R na klávesnici.",
     },
     {
-      question: "Як оновити список фільмів?",
+      question: "Co znamená hodnocení?",
       answer:
-        "Список фільмів оновлюється автоматично. Ви також можете натиснути кнопку оновлення (↺) внизу екрана для ручного оновлення.",
-    },
-    {
-      question: "Що таке рейтинг фільму?",
-      answer:
-        "Кожен фільм має рейтинг на основі оцінок користувачів (M) та даних з TMDB (The Movie Database). Рейтинг відображається на картці фільму.",
-    },
-    {
-      question: "Як вибрати випадковий фільм?",
-      answer:
-        "Натисніть кнопку оновлення (↺) внизу екрана або клавішу R на клавіатурі, щоб перейти до випадкового фільму зі списку.",
+        "M je lokální hodnocení uživatelů, TMDB je hodnocení z The Movie Database.",
     },
   ];
 
   return (
     <Modal transparent visible={visible} animationType="none" onRequestClose={onClose} statusBarTranslucent>
-      <View style={faqStyles.container} pointerEvents="box-none">
+      <View style={faqStyles.container}>
         <Pressable style={faqStyles.overlay} onPress={onClose}>
-          <Animated.View style={{ opacity: fadeAnim }}>
-            <View style={faqStyles.overlayBg} />
-          </Animated.View>
+          <Animated.View style={[faqStyles.overlayBg, { opacity: fadeAnim }]} />
         </Pressable>
 
-        <Pressable onPress={(e) => e.stopPropagation()} style={{ width: "100%", alignItems: "center" }}>
-          <Animated.View style={[faqStyles.modal, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
-            <BlurView intensity={20} tint="dark" style={faqStyles.blur}>
-              <View style={faqStyles.header}>
-                <Text style={faqStyles.title}>Допомога та FAQ</Text>
-                <TouchableOpacity onPress={onClose} style={faqStyles.closeBtn} activeOpacity={0.7}>
-                  <Text style={faqStyles.closeText}>×</Text>
-                </TouchableOpacity>
+        <Animated.View style={[faqStyles.modal, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          <View style={faqStyles.modalBg} />
+          <BlurView intensity={28} tint="dark" style={StyleSheet.absoluteFillObject} />
+
+          <View style={faqStyles.header}>
+            <Text style={faqStyles.title}>Nápověda a FAQ</Text>
+            <TouchableOpacity onPress={onClose} style={faqStyles.closeBtn} activeOpacity={0.8}>
+              <Text style={faqStyles.closeText}>×</Text>
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={faqStyles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 22 }}>
+            {faqItems.map((item, index) => (
+              <View key={index} style={faqStyles.item}>
+                <Text style={faqStyles.question}>{item.question}</Text>
+                <Text style={faqStyles.answer}>{item.answer}</Text>
               </View>
-
-              <ScrollView style={faqStyles.content} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
-                {faqItems.map((item, index) => (
-                  <View key={index} style={faqStyles.item}>
-                    <Text style={faqStyles.question}>{item.question}</Text>
-                    <Text style={faqStyles.answer}>{item.answer}</Text>
-                  </View>
-                ))}
-              </ScrollView>
-            </BlurView>
-          </Animated.View>
-        </Pressable>
+            ))}
+          </ScrollView>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -852,49 +838,56 @@ const actionStyles = StyleSheet.create({
 });
 
 const faqStyles = StyleSheet.create({
-  overlay: { ...StyleSheet.absoluteFillObject, zIndex: 0 },
-  overlayBg: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0, 0, 0, 0.75)" },
-  container: { flex: 1, justifyContent: "center", alignItems: "center", padding: 20, zIndex: 1 },
+  container: { flex: 1, justifyContent: "center", alignItems: "center", padding: 18 },
+  overlay: { ...StyleSheet.absoluteFillObject },
+  overlayBg: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.82)" },
+
   modal: {
     width: "100%",
-    maxWidth: 600,
-    maxHeight: "80%",
-    borderRadius: 24,
+    maxWidth: 620,
+    maxHeight: "82%",
+    borderRadius: 22,
     overflow: "hidden",
     borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
+    borderColor: "rgba(255,255,255,0.12)",
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 20 },
-    shadowOpacity: 0.5,
-    shadowRadius: 30,
-    elevation: 20,
+    shadowOffset: { width: 0, height: 22 },
+    shadowOpacity: 0.55,
+    shadowRadius: 34,
+    elevation: 22,
   },
-  blur: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(10, 10, 12, 0.95)" },
+
+  modalBg: { ...StyleSheet.absoluteFillObject, backgroundColor: "#0B0C10", opacity: 0.92 },
+
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    padding: 20,
-    paddingBottom: 16,
+    paddingHorizontal: 18,
+    paddingTop: 18,
+    paddingBottom: 14,
     borderBottomWidth: 1,
-    borderBottomColor: "rgba(255, 255, 255, 0.1)",
+    borderBottomColor: "rgba(255,255,255,0.10)",
   },
-  title: { color: soft(0.95), fontSize: 22, fontWeight: "900", letterSpacing: 0.3 },
+
+  title: { color: soft(0.98), fontSize: 20, fontWeight: "900", letterSpacing: 0.2 },
+
   closeBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(255, 255, 255, 0.1)",
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.12)",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255, 255, 255, 0.1)",
   },
-  closeText: { color: soft(0.9), fontSize: 24, fontWeight: "300", lineHeight: 24 },
-  content: { padding: 20 },
-  item: { marginBottom: 24, paddingBottom: 20, borderBottomWidth: 1, borderBottomColor: "rgba(255, 255, 255, 0.05)" },
-  question: { color: soft(0.95), fontSize: 16, fontWeight: "800", marginBottom: 10, letterSpacing: 0.2 },
-  answer: { color: soft(0.7), fontSize: 14, fontWeight: "600", lineHeight: 20 },
+  closeText: { color: soft(0.92), fontSize: 24, fontWeight: "300", lineHeight: 24 },
+
+  content: { paddingHorizontal: 18, paddingTop: 14 },
+  item: { marginBottom: 18, paddingBottom: 16, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.06)" },
+  question: { color: soft(0.96), fontSize: 15, fontWeight: "900", marginBottom: 8, letterSpacing: 0.15 },
+  answer: { color: soft(0.72), fontSize: 14, fontWeight: "650", lineHeight: 20 },
 });
 
 function truncate(s, max) {
