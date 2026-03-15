@@ -14,46 +14,17 @@ import {
   Modal,
   ScrollView,
   Pressable,
+  Alert,
 } from "react-native";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 
-import { signOut } from "../lib/auth";
 import { getMovies } from "../lib/movies";
 import { addFavorite } from "../lib/favorites";
 import MenuBar from "./MenuBar";
 
 const isWeb = Platform.OS === "web";
 const canUseNativeDriver = !isWeb;
-
-const defaultMovies = [
-  {
-    id: "1",
-    title: "Harry Potter a Kámen mudrců",
-    year: 2001,
-    rating: 9.2,
-    tmdb: 7.9,
-    tmdbVotes: "29k",
-    localVotes: 47,
-    genreTags: ["Dobrodružný", "Fantasy"],
-    director: "Chris Columbus",
-    image:
-      "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
-  },
-  {
-    id: "2",
-    title: "Počátek (Inception)",
-    year: 2010,
-    rating: 8.8,
-    tmdb: 8.7,
-    tmdbVotes: "2.3M",
-    localVotes: 183,
-    genreTags: ["Sci-Fi", "Akční"],
-    director: "Christopher Nolan",
-    image:
-      "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?ixlib=rb-4.0.3&auto=format&fit=crop&w=2070&q=80",
-  },
-];
 
 const soft = (v) => `rgba(255,255,255,${v})`;
 const clamp = (n, min, max) => Math.max(min, Math.min(max, n));
@@ -74,7 +45,7 @@ const OFFSCREEN_X = (w) => w + 280;
 
 export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchToProfile, onNavigate }) {
   const [layout, setLayout] = useState(getLayout());
-  const [movies, setMovies] = useState(defaultMovies);
+  const [movies, setMovies] = useState([]);
   const [currentMovieIndex, setCurrentMovieIndex] = useState(0);
   const [showWelcome, setShowWelcome] = useState(true);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -93,11 +64,16 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
   const loadMovies = useCallback(async () => {
     try {
       const savedMovies = await getMovies();
-      if (savedMovies && savedMovies.length > 0) {
-        setMovies(savedMovies);
-        setCurrentMovieIndex((idx) => (idx >= savedMovies.length ? 0 : idx));
-      }
-    } catch (e) {}
+      setMovies(Array.isArray(savedMovies) ? savedMovies : []);
+      setCurrentMovieIndex((idx) => {
+        if (!savedMovies?.length) return 0;
+        return idx >= savedMovies.length ? 0 : idx;
+      });
+    } catch (e) {
+      console.error("loadMovies error:", e);
+      setMovies([]);
+      setCurrentMovieIndex(0);
+    }
   }, []);
 
   useEffect(() => {
@@ -134,6 +110,10 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
     });
   }, [currentMovie?.image, nextMovie?.image, next2Movie?.image]);
 
+  const showMessage = useCallback((title, message) => {
+    Alert.alert(title, message);
+  }, []);
+
   const resetPosition = useCallback(() => {
     Animated.parallel([
       Animated.spring(x, { toValue: 0, stiffness: 280, damping: 22, mass: 0.9, useNativeDriver: canUseNativeDriver }),
@@ -169,13 +149,27 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
 
   const swipeRight = useCallback(async () => {
     const m = movies[currentMovieIndex];
-    if (m) {
-      try {
-        await addFavorite(m);
-      } catch (e) {}
+    if (!m) return;
+
+    try {
+      const result = await addFavorite(m);
+
+      if (result?.success) {
+        animateOffscreen(1);
+        return;
+      }
+
+      if (result?.code === "ALREADY_EXISTS") {
+        animateOffscreen(1);
+        return;
+      }
+
+      showMessage("Chyba", result?.error || "Nepodařilo se přidat film do oblíbených.");
+    } catch (e) {
+      console.error("swipeRight error:", e);
+      showMessage("Chyba", e?.message || "Nepodařilo se přidat film do oblíbených.");
     }
-    animateOffscreen(1);
-  }, [animateOffscreen, currentMovieIndex, movies]);
+  }, [animateOffscreen, currentMovieIndex, movies, showMessage]);
 
   const swipeLeft = useCallback(() => {
     animateOffscreen(-1);
@@ -228,10 +222,7 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
   }, [movies.length, resetPosition, swipeLeft, swipeRight]);
 
   const handleLogout = useCallback(async () => {
-    try {
-      await signOut();
-      onLogout?.();
-    } catch (e) {}
+    onLogout?.();
   }, [onLogout]);
 
   const handleNavigate = useCallback(
@@ -317,6 +308,7 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
           <TopBar showWelcome={showWelcome} email={user?.email} onMenu={() => setMenuOpen(true)} onFaq={() => setFaqOpen((v) => !v)} />
           <View style={styles.emptyWrap}>
             <Text style={styles.emptyTitle}>Žádné filmy</Text>
+            <Text style={styles.emptySub}>Knihovna je prázdná nebo se data nepodařilo načíst.</Text>
             <TouchableOpacity style={styles.primaryBtn} onPress={loadMovies} activeOpacity={0.9}>
               <Text style={styles.primaryBtnText}>Obnovit</Text>
             </TouchableOpacity>
@@ -351,7 +343,7 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
           {!!next2Movie && (
             <Animated.View pointerEvents="none" style={[styles.cardShell, styles.cardBack2, { transform: [{ translateY: next2Y }, { scale: next2Scale }] }]}>
               <CardFrame dim>
-                <PosterStage uri={next2Movie.image} chips={next2Movie.genreTags} dim />
+                <PosterStage uri={next2Movie.image} chips={next2Movie.genreTags || []} dim />
               </CardFrame>
             </Animated.View>
           )}
@@ -359,7 +351,7 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
           {!!nextMovie && (
             <Animated.View pointerEvents="none" style={[styles.cardShell, styles.cardBack, { transform: [{ translateY: nextY }, { scale: nextScale }] }]}>
               <CardFrame dim>
-                <PosterStage uri={nextMovie.image} chips={nextMovie.genreTags} dim />
+                <PosterStage uri={nextMovie.image} chips={nextMovie.genreTags || []} dim />
               </CardFrame>
             </Animated.View>
           )}
@@ -376,7 +368,7 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
                 <Text style={styles.badgeText}>NE</Text>
               </Animated.View>
 
-              <PosterStage uri={currentMovie.image} chips={currentMovie.genreTags} />
+              <PosterStage uri={currentMovie.image} chips={currentMovie.genreTags || []} />
 
               <View style={styles.cardInfoWrap}>
                 <BlurView intensity={22} tint="dark" style={styles.infoBlur} />
@@ -395,11 +387,11 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
 
                 <View style={styles.ratingRow}>
                   <RatingPill left="M" value={`${fmtNum(currentMovie.rating)} (${currentMovie.localVotes ?? "—"})`} />
-                  <RatingPill left="TMDB" value={`${fmtNum(currentMovie.tmdb ?? 7.9)} (${currentMovie.tmdbVotes ?? "—"})`} />
+                  <RatingPill left="TMDB" value={`${fmtNum(currentMovie.tmdb ?? currentMovie.rating ?? "—")} (${currentMovie.tmdbVotes ?? "—"})`} />
                 </View>
 
                 <Text style={styles.metaText} numberOfLines={1}>
-                  {currentMovie.year} · {currentMovie.director}
+                  {currentMovie.year ?? "—"} · {currentMovie.director || "Neznámý"}
                 </Text>
               </View>
             </CardFrame>
@@ -416,7 +408,6 @@ export default function MainScreen({ user, onLogout, onSwitchToAdmin, onSwitchTo
       </View>
 
       <MenuBar currentScreen="main" onNavigate={handleNavigate} user={user} onLogout={handleLogout} isOpen={menuOpen} onClose={() => setMenuOpen(false)} />
-
       <FaqModal isOpen={faqOpen} onClose={() => setFaqOpen(false)} />
     </View>
   );
@@ -575,8 +566,25 @@ function CardFrame({ children, dim = false }) {
 function PosterStage({ uri, chips = [], dim = false }) {
   return (
     <View style={posterStyles.wrap}>
-      <View style={[posterStyles.poster, dim && { opacity: 0.9 }]}>
-        <Image source={{ uri }} style={posterStyles.img} resizeMode="contain" fadeDuration={180} progressiveRenderingEnabled />
+      <View style={[posterStyles.poster, dim && { opacity: 0.9 }]}> 
+        <Image
+          source={{ uri }}
+          style={[
+            posterStyles.img,
+            isWeb && { filter: 'brightness(0.85) contrast(1.15) saturate(1.1)' },
+          ]}
+          resizeMode={isWeb ? 'cover' : 'contain'}
+          fadeDuration={180}
+          progressiveRenderingEnabled
+        />
+        {/* Extra overlay for web to improve readability */}
+        {isWeb && (
+          <View style={{
+            ...StyleSheet.absoluteFillObject,
+            backgroundColor: 'rgba(0,0,0,0.22)',
+            zIndex: 2,
+          }} />
+        )}
         <LinearGradient colors={["rgba(0,0,0,0.10)", "rgba(0,0,0,0.52)"]} start={{ x: 0.5, y: 0 }} end={{ x: 0.5, y: 1 }} style={posterStyles.shade} />
         <View style={posterStyles.chipsRow}>
           {chips.slice(0, 2).map((t, idx) => (
@@ -686,6 +694,7 @@ const createStyles = ({ w, desktop, tablet, cardW, cardH }) => {
 
     emptyWrap: { flex: 1, alignItems: "center", justifyContent: "center", gap: 10 },
     emptyTitle: { color: soft(0.92), fontSize: 22, fontWeight: "900" },
+    emptySub: { color: soft(0.65), fontSize: 14, textAlign: "center", maxWidth: 320, lineHeight: 20 },
     primaryBtn: { marginTop: 6, height: 48, paddingHorizontal: 16, borderRadius: 14, backgroundColor: "rgba(255,255,255,0.10)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)", alignItems: "center", justifyContent: "center", overflow: "hidden" },
     primaryBtnText: { color: soft(0.92), fontWeight: "900" },
   });

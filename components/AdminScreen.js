@@ -13,12 +13,19 @@ import {
   StatusBar,
   Modal,
 } from "react-native";
-import AsyncStorage from "@react-native-async-storage/async-storage";
 import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 
 import { signOut } from "../lib/auth";
-import { getMovieDetails, addMovie, getMovies, deleteMovie, deleteAllMovies, getMovieTrailer } from "../lib/movies";
+import {
+  getMovieDetails,
+  addMovie,
+  getMovies,
+  deleteMovie,
+  deleteAllMovies,
+  getMovieTrailer,
+  updateMovie,
+} from "../lib/movies";
 import MenuBar from "./MenuBar";
 
 const isWeb = Platform.OS === "web";
@@ -69,7 +76,14 @@ function TopBar({ title, subtitle, onMenu }) {
       </View>
 
       <TouchableOpacity onPress={onMenu} activeOpacity={0.85} style={topStyles.menuBtn}>
-        {!isWeb && <BlurView intensity={14} tint="dark" style={StyleSheet.absoluteFillObject} pointerEvents="none" />}
+        {!isWeb && (
+          <BlurView
+            intensity={14}
+            tint="dark"
+            style={StyleSheet.absoluteFillObject}
+            pointerEvents="none"
+          />
+        )}
         <View style={topStyles.menuIcon} pointerEvents="none">
           <View style={topStyles.menuLine} />
           <View style={topStyles.menuLine} />
@@ -83,7 +97,14 @@ function TopBar({ title, subtitle, onMenu }) {
 function Card({ children, style, strokeOpacity = 0.9 }) {
   return (
     <View style={[ui.card, style]}>
-      {!isWeb && <BlurView intensity={18} tint="dark" style={StyleSheet.absoluteFillObject} pointerEvents="none" />}
+      {!isWeb && (
+        <BlurView
+          intensity={18}
+          tint="dark"
+          style={StyleSheet.absoluteFillObject}
+          pointerEvents="none"
+        />
+      )}
       <LinearGradient
         colors={["rgba(255,255,255,0.12)", "rgba(255,255,255,0.03)"]}
         start={{ x: 0, y: 0 }}
@@ -100,6 +121,7 @@ function Chip({ title, onPress, variant = "ghost", style, disabled }) {
   const isDanger = variant === "danger";
   const isPrimary = variant === "primary";
   const isDim = variant === "dim";
+
   return (
     <TouchableOpacity
       activeOpacity={0.9}
@@ -114,7 +136,14 @@ function Chip({ title, onPress, variant = "ghost", style, disabled }) {
         style,
       ]}
     >
-      {!isWeb && <BlurView intensity={14} tint="dark" style={StyleSheet.absoluteFillObject} pointerEvents="none" />}
+      {!isWeb && (
+        <BlurView
+          intensity={14}
+          tint="dark"
+          style={StyleSheet.absoluteFillObject}
+          pointerEvents="none"
+        />
+      )}
       <Text style={ui.chipTxt}>{title}</Text>
     </TouchableOpacity>
   );
@@ -122,6 +151,7 @@ function Chip({ title, onPress, variant = "ghost", style, disabled }) {
 
 function CenterModal({ open, onClose, children, dismissable = true }) {
   if (!open) return null;
+
   return (
     <Modal visible={open} transparent animationType="fade" onRequestClose={() => dismissable && onClose?.()}>
       <View style={modalStyles.root}>
@@ -131,7 +161,14 @@ function CenterModal({ open, onClose, children, dismissable = true }) {
           style={modalStyles.backdrop}
         />
         <View style={modalStyles.card}>
-          {!isWeb && <BlurView intensity={26} tint="dark" style={StyleSheet.absoluteFillObject} pointerEvents="none" />}
+          {!isWeb && (
+            <BlurView
+              intensity={26}
+              tint="dark"
+              style={StyleSheet.absoluteFillObject}
+              pointerEvents="none"
+            />
+          )}
           <LinearGradient
             colors={["rgba(255,255,255,0.16)", "rgba(255,255,255,0.04)"]}
             start={{ x: 0, y: 0 }}
@@ -190,10 +227,20 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
   const [movies, setMovies] = useState([]);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const [confirmState, setConfirmState] = useState({ open: false, title: "", message: "", danger: false });
+  const [confirmState, setConfirmState] = useState({
+    open: false,
+    title: "",
+    message: "",
+    danger: false,
+  });
   const confirmResolverRef = useRef(null);
 
-  const [toast, setToast] = useState({ open: false, title: "", message: "", variant: "success" });
+  const [toast, setToast] = useState({
+    open: false,
+    title: "",
+    message: "",
+    variant: "success",
+  });
 
   const [seedCount, setSeedCount] = useState(100);
   const [seeding, setSeeding] = useState(false);
@@ -213,9 +260,9 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
 
   const closeConfirm = useCallback((value) => {
     setConfirmState((s) => ({ ...s, open: false }));
-    const r = confirmResolverRef.current;
+    const resolver = confirmResolverRef.current;
     confirmResolverRef.current = null;
-    r?.(value);
+    resolver?.(value);
   }, []);
 
   useEffect(() => {
@@ -235,17 +282,6 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
 
   useEffect(() => {
     loadMovies();
-    const deleteMoviesOnce = async () => {
-      try {
-        const hasDeleted = await AsyncStorage.getItem("movies_deleted_once");
-        if (!hasDeleted) {
-          await deleteAllMovies();
-          await AsyncStorage.setItem("movies_deleted_once", "true");
-          await loadMovies();
-        }
-      } catch {}
-    };
-    deleteMoviesOnce();
   }, [loadMovies]);
 
   const handleLogout = useCallback(async () => {
@@ -261,14 +297,14 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
       else if (screen === "profile") onNavigate?.("profile");
       else if (screen === "admin") onNavigate?.("admin");
     },
-    [onSwitchToMain, onNavigate],
+    [onSwitchToMain, onNavigate]
   );
 
   const handleDeleteAllMovies = useCallback(async () => {
     const ok = await confirm(
       "Smazat vše?",
       "Opravdu chcete smazat všechny filmy? Tato akce je nevratná.",
-      true,
+      true
     );
     if (!ok) return;
 
@@ -397,27 +433,24 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
         showToast("Chyba", e?.message || "Nepodařilo se smazat film.", "error");
       }
     },
-    [confirm, loadMovies, showToast],
+    [confirm, loadMovies, showToast]
   );
 
-  const startEditExisting = useCallback(
-    (movie) => {
-      if (!movie) return;
-      setTmdbId(movie.tmdbId || movie.tmdb_id || null);
-      setEditedMovie({
-        title: movie.title || "",
-        year: movie.year?.toString?.() || `${movie.year || ""}`,
-        rating: movie.rating?.toString?.() || `${movie.rating || ""}`,
-        genre: movie.genre || "",
-        director: movie.director || "",
-        description: movie.description || "",
-        image: movie.image || "",
-        trailerUrl: movie.trailerUrl || movie.trailer_url || "",
-        _editDbId: movie.id,
-      });
-    },
-    [],
-  );
+  const startEditExisting = useCallback((movie) => {
+    if (!movie) return;
+    setTmdbId(movie.tmdbId || movie.tmdb_id || null);
+    setEditedMovie({
+      title: movie.title || "",
+      year: movie.year?.toString?.() || `${movie.year || ""}`,
+      rating: movie.rating?.toString?.() || `${movie.rating || ""}`,
+      genre: movie.genre || "",
+      director: movie.director || "",
+      description: movie.description || "",
+      image: movie.image || "",
+      trailerUrl: movie.trailerUrl || movie.trailer_url || "",
+      _editDbId: movie.id,
+    });
+  }, []);
 
   const handleSaveEdit = useCallback(async () => {
     if (!editedMovie?._editDbId) return;
@@ -433,7 +466,7 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
       return;
     }
 
-    const movieToAdd = {
+    const patch = {
       title: editedMovie.title.trim(),
       year: parseInt(editedMovie.year, 10) || new Date().getFullYear(),
       rating: parseFloat(editedMovie.rating) || 0,
@@ -448,26 +481,19 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
     };
 
     try {
-      const del = await deleteMovie(editedMovie._editDbId);
-      if (!del?.success) {
-        showToast("Chyba", del?.error || "Nepodařilo se uložit změny.", "error");
-        return;
-      }
+      const result = await updateMovie(editedMovie._editDbId, patch);
 
-      const add = await addMovie(movieToAdd);
-      if (add?.success) {
+      if (result?.success) {
         showToast("Uloženo", "Změny byly uloženy.", "success");
         setEditedMovie(null);
         setTmdbId(null);
         setSearchQuery("");
         await loadMovies();
       } else {
-        showToast("Chyba", add?.error || "Nepodařilo se uložit změny.", "error");
-        await loadMovies();
+        showToast("Chyba", result?.error || "Nepodařilo se uložit změny.", "error");
       }
     } catch (e) {
       showToast("Chyba", e?.message || "Nepodařilo se uložit změny.", "error");
-      await loadMovies();
     }
   }, [editedMovie, tmdbId, loadMovies, showToast]);
 
@@ -477,7 +503,7 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
     const ok = await confirm(
       "Naplnit knihovnu?",
       `Chceš přidat náhodně ${seedCount} filmů? (Pokud už některé existují, budou se přeskakovat.)`,
-      false,
+      false
     );
     if (!ok) return;
 
@@ -490,11 +516,14 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
         (existing || [])
           .map((m) => m.tmdbId || m.tmdb_id)
           .filter(Boolean)
-          .map((x) => String(x)),
+          .map((x) => String(x))
       );
       const existingTitles = new Set((existing || []).map((m) => (m.title || "").toLowerCase()));
 
-      const candidates = pickRandomUnique(DEMO_TMDB_IDS, Math.min(DEMO_TMDB_IDS.length, seedCount * 4));
+      const candidates = pickRandomUnique(
+        DEMO_TMDB_IDS,
+        Math.min(DEMO_TMDB_IDS.length, seedCount * 4)
+      );
       let added = 0;
 
       for (let i = 0; i < candidates.length && added < seedCount; i++) {
@@ -543,8 +572,15 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
 
       await loadMovies();
 
-      if (added > 0) showToast("Hotovo", `Přidáno ${added} filmů.`, "success");
-      else showToast("Info", "Nepodařilo se přidat žádný film (vše bylo duplicitní nebo nedostupné).", "info");
+      if (added > 0) {
+        showToast("Hotovo", `Přidáno ${added} filmů.`, "success");
+      } else {
+        showToast(
+          "Info",
+          "Nepodařilo se přidat žádný film (vše bylo duplicitní nebo nedostupné).",
+          "info"
+        );
+      }
     } catch (e) {
       showToast("Chyba", e?.message || "Nepodařilo se naplnit knihovnu.", "error");
     } finally {
@@ -562,7 +598,12 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
 
       <CenterModal open={confirmState.open} onClose={() => closeConfirm(false)} dismissable>
         <View style={modalStyles.head}>
-          <View style={[modalStyles.iconDot, confirmState.danger ? modalStyles.iconDotDanger : modalStyles.iconDotSoft]}>
+          <View
+            style={[
+              modalStyles.iconDot,
+              confirmState.danger ? modalStyles.iconDotDanger : modalStyles.iconDotSoft,
+            ]}
+          >
             <Text style={modalStyles.iconTxt}>{confirmState.danger ? "!" : "?"}</Text>
           </View>
           <View style={{ flex: 1 }}>
@@ -571,7 +612,11 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
           </View>
         </View>
         <View style={modalStyles.actions}>
-          <TouchableOpacity activeOpacity={0.9} style={[modalStyles.btn, modalStyles.btnGhost]} onPress={() => closeConfirm(false)}>
+          <TouchableOpacity
+            activeOpacity={0.9}
+            style={[modalStyles.btn, modalStyles.btnGhost]}
+            onPress={() => closeConfirm(false)}
+          >
             <Text style={modalStyles.btnTxt}>Zrušit</Text>
           </TouchableOpacity>
           <TouchableOpacity
@@ -582,12 +627,18 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
             ]}
             onPress={() => closeConfirm(true)}
           >
-            <Text style={modalStyles.btnTxtStrong}>{confirmState.danger ? "Smazat" : "Pokračovat"}</Text>
+            <Text style={modalStyles.btnTxtStrong}>
+              {confirmState.danger ? "Smazat" : "Pokračovat"}
+            </Text>
           </TouchableOpacity>
         </View>
       </CenterModal>
 
-      <CenterModal open={toast.open} onClose={() => setToast((t) => ({ ...t, open: false }))} dismissable>
+      <CenterModal
+        open={toast.open}
+        onClose={() => setToast((t) => ({ ...t, open: false }))}
+        dismissable
+      >
         <View style={toastStyles.wrap}>
           <View
             style={[
@@ -611,7 +662,11 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
       <View style={styles.contentWrapper}>
         <TopBar title="Admin Panel" subtitle={email} onMenu={() => setMenuOpen(true)} />
 
-        <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scroll}
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <Card style={styles.sectionCard} strokeOpacity={0.92}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Přidat / upravit film</Text>
@@ -627,13 +682,20 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
                 onChangeText={setSearchQuery}
                 keyboardType="numeric"
               />
-              <Chip title={loading ? "..." : "Vyhledat"} variant="primary" onPress={handleSearch} disabled={loading} />
+              <Chip
+                title={loading ? "..." : "Vyhledat"}
+                variant="primary"
+                onPress={handleSearch}
+                disabled={loading}
+              />
             </View>
 
             {!!editedMovie && (
               <View style={styles.formWrap}>
                 <View style={styles.formTop}>
-                  <Text style={styles.formTitle}>{isEditingExisting ? "Upravit existující film" : "Upravit informace o filmu"}</Text>
+                  <Text style={styles.formTitle}>
+                    {isEditingExisting ? "Upravit existující film" : "Upravit informace o filmu"}
+                  </Text>
                   <Chip
                     title="Zrušit"
                     variant="dim"
@@ -752,7 +814,9 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
                   autoCapitalize="none"
                   autoCorrect={false}
                 />
-                <Text style={styles.helpText}>Pokud nezadáš link, trailer se zkusí vzít z TMDB (pokud je k dispozici).</Text>
+                <Text style={styles.helpText}>
+                  Pokud nezadáš link, trailer se zkusí vzít z TMDB (pokud je k dispozici).
+                </Text>
 
                 <View style={styles.actionsRow}>
                   {isEditingExisting ? (
@@ -774,13 +838,20 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
                   {seeding ? (
                     <Text style={styles.sectionSub}>
                       {"  "}• Přidávám:{" "}
-                      <Text style={styles.sectionSubStrong}>{seedProgress.added}/{seedProgress.total}</Text>
+                      <Text style={styles.sectionSubStrong}>
+                        {seedProgress.added}/{seedProgress.total}
+                      </Text>
                     </Text>
                   ) : null}
                 </Text>
               </View>
 
-              <Chip title="Smazat vše" variant="danger" onPress={handleDeleteAllMovies} disabled={seeding} />
+              <Chip
+                title="Smazat vše"
+                variant="danger"
+                onPress={handleDeleteAllMovies}
+                disabled={seeding}
+              />
             </View>
 
             <View style={styles.seedRow}>
@@ -804,7 +875,14 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
                 onPress={seedLibrary}
                 disabled={seeding}
               >
-                {!isWeb && <BlurView intensity={18} tint="dark" style={StyleSheet.absoluteFillObject} pointerEvents="none" />}
+                {!isWeb && (
+                  <BlurView
+                    intensity={18}
+                    tint="dark"
+                    style={StyleSheet.absoluteFillObject}
+                    pointerEvents="none"
+                  />
+                )}
                 <LinearGradient
                   colors={["rgba(80,210,255,0.20)", "rgba(229,9,20,0.12)"]}
                   start={{ x: 0, y: 0 }}
@@ -826,7 +904,9 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
             {movies.length === 0 ? (
               <View style={styles.emptyWrap}>
                 <Text style={styles.emptyTitle}>Žádné filmy</Text>
-                <Text style={styles.emptySub}>Přidej film přes TMDB ID nebo použij „Naplnit knihovnu náhodně“.</Text>
+                <Text style={styles.emptySub}>
+                  Přidej film přes TMDB ID nebo použij „Naplnit knihovnu náhodně“.
+                </Text>
                 <Chip title="Zpět na filmy" onPress={() => onSwitchToMain?.()} />
               </View>
             ) : (
@@ -859,7 +939,14 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
                       onPress={() => startEditExisting(movie)}
                       disabled={seeding}
                     >
-                      {!isWeb && <BlurView intensity={14} tint="dark" style={StyleSheet.absoluteFillObject} pointerEvents="none" />}
+                      {!isWeb && (
+                        <BlurView
+                          intensity={14}
+                          tint="dark"
+                          style={StyleSheet.absoluteFillObject}
+                          pointerEvents="none"
+                        />
+                      )}
                       <Text style={styles.editPillTxt}>✎</Text>
                     </TouchableOpacity>
 
@@ -869,7 +956,14 @@ const AdminScreen = ({ user, onLogout, onSwitchToMain, onNavigate }) => {
                       onPress={() => handleDeleteMovie(movie.id)}
                       disabled={seeding}
                     >
-                      {!isWeb && <BlurView intensity={14} tint="dark" style={StyleSheet.absoluteFillObject} pointerEvents="none" />}
+                      {!isWeb && (
+                        <BlurView
+                          intensity={14}
+                          tint="dark"
+                          style={StyleSheet.absoluteFillObject}
+                          pointerEvents="none"
+                        />
+                      )}
                       <Text style={styles.deletePillTxt}>✕</Text>
                     </TouchableOpacity>
                   </View>
@@ -941,8 +1035,18 @@ const createStyles = ({ desktop, tablet, pad, topPad }) =>
 
     sectionCard: { padding: desktop ? 18 : 16 },
 
-    sectionHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12 },
-    sectionTitle: { color: soft(0.95), fontWeight: "900", fontSize: desktop ? 20 : 18, letterSpacing: 0.2 },
+    sectionHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12,
+    },
+    sectionTitle: {
+      color: soft(0.95),
+      fontWeight: "900",
+      fontSize: desktop ? 20 : 18,
+      letterSpacing: 0.2,
+    },
     sectionBadge: {
       paddingHorizontal: 10,
       paddingVertical: 6,
@@ -968,8 +1072,19 @@ const createStyles = ({ desktop, tablet, pad, topPad }) =>
       fontWeight: "800",
     },
 
-    formWrap: { marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: "rgba(255,255,255,0.08)" },
-    formTop: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 10 },
+    formWrap: {
+      marginTop: 14,
+      paddingTop: 14,
+      borderTopWidth: 1,
+      borderTopColor: "rgba(255,255,255,0.08)",
+    },
+    formTop: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12,
+      gap: 10,
+    },
     formTitle: { color: soft(0.92), fontWeight: "900", fontSize: 16, flex: 1 },
 
     formGrid: { flexDirection: tablet ? "row" : "column", gap: 14 },
@@ -986,7 +1101,13 @@ const createStyles = ({ desktop, tablet, pad, topPad }) =>
     poster: { ...StyleSheet.absoluteFillObject, width: "100%", height: "100%" },
     posterShade: { ...StyleSheet.absoluteFillObject },
 
-    inputLabel: { marginTop: 10, marginBottom: 8, color: soft(0.7), fontWeight: "800", fontSize: 12 },
+    inputLabel: {
+      marginTop: 10,
+      marginBottom: 8,
+      color: soft(0.7),
+      fontWeight: "800",
+      fontSize: 12,
+    },
     input: {
       minHeight: 44,
       borderRadius: 14,
@@ -1002,11 +1123,23 @@ const createStyles = ({ desktop, tablet, pad, topPad }) =>
 
     textArea: { minHeight: 110 },
 
-    helpText: { marginTop: 8, color: soft(0.55), fontWeight: "650", fontSize: 12, lineHeight: 17 },
+    helpText: {
+      marginTop: 8,
+      color: soft(0.55),
+      fontWeight: "650",
+      fontSize: 12,
+      lineHeight: 17,
+    },
 
     actionsRow: { marginTop: 14, flexDirection: "row", justifyContent: "flex-end" },
 
-    listHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 12, gap: 12 },
+    listHeader: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 12,
+      gap: 12,
+    },
     sectionSub: { marginTop: 6, color: soft(0.60), fontWeight: "750" },
     sectionSubStrong: { color: soft(0.90), fontWeight: "900" },
 
@@ -1033,7 +1166,12 @@ const createStyles = ({ desktop, tablet, pad, topPad }) =>
 
     emptyWrap: { alignItems: "center", paddingVertical: 16, gap: 8 },
     emptyTitle: { color: soft(0.92), fontWeight: "900", fontSize: 16 },
-    emptySub: { color: soft(0.60), fontWeight: "650", textAlign: "center", lineHeight: 18 },
+    emptySub: {
+      color: soft(0.60),
+      fontWeight: "650",
+      textAlign: "center",
+      lineHeight: 18,
+    },
 
     list: { gap: 10, marginTop: 10 },
 
@@ -1088,17 +1226,44 @@ const createStyles = ({ desktop, tablet, pad, topPad }) =>
       alignItems: "center",
       justifyContent: "center",
     },
-    deletePillTxt: { color: soft(0.92), fontWeight: "900", fontSize: 16, marginTop: -1 },
+    deletePillTxt: {
+      color: soft(0.92),
+      fontWeight: "900",
+      fontSize: 16,
+      marginTop: -1,
+    },
   });
 
 const topStyles = StyleSheet.create({
-  wrap: { paddingTop: isWeb ? 10 : 12, paddingBottom: 8, flexDirection: "row", alignItems: "center", justifyContent: "space-between", zIndex: 10 },
+  wrap: {
+    paddingTop: isWeb ? 10 : 12,
+    paddingBottom: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    zIndex: 10,
+  },
   left: { flex: 1, paddingRight: 12 },
   title: { color: soft(0.95), fontWeight: "900", fontSize: 22, letterSpacing: 0.2 },
   sub: { marginTop: 4, color: soft(0.55), fontWeight: "700", fontSize: 12 },
-  menuBtn: { width: 46, height: 46, borderRadius: 999, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", backgroundColor: "rgba(255,255,255,0.06)", alignItems: "center", justifyContent: "center" },
+  menuBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 999,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.10)",
+    backgroundColor: "rgba(255,255,255,0.06)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
   menuIcon: { height: 16, justifyContent: "space-between" },
-  menuLine: { width: 22, height: 2, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.78)" },
+  menuLine: {
+    width: 22,
+    height: 2,
+    borderRadius: 2,
+    backgroundColor: "rgba(255,255,255,0.78)",
+  },
 });
 
 const bgStyles = StyleSheet.create({
@@ -1106,7 +1271,11 @@ const bgStyles = StyleSheet.create({
   glowTop: { top: -170, left: -140, backgroundColor: "rgba(165, 120, 255, 0.20)" },
   glowRight: { top: 110, right: -200, backgroundColor: "rgba(80, 210, 255, 0.14)" },
   glowBottom: { bottom: -210, left: 40, backgroundColor: "rgba(255, 70, 170, 0.12)" },
-  noise: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(255,255,255,0.03)", opacity: 0.18 },
+  noise: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(255,255,255,0.03)",
+    opacity: 0.18,
+  },
 });
 
 const modalStyles = StyleSheet.create({
@@ -1124,27 +1293,73 @@ const modalStyles = StyleSheet.create({
   },
   stroke: { ...StyleSheet.absoluteFillObject, opacity: 0.95 },
   head: { flexDirection: "row", gap: 12, alignItems: "flex-start", padding: 4 },
-  iconDot: { width: 44, height: 44, borderRadius: 999, alignItems: "center", justifyContent: "center", borderWidth: 1 },
-  iconDotDanger: { backgroundColor: "rgba(229,9,20,0.20)", borderColor: "rgba(255,255,255,0.14)" },
-  iconDotSoft: { backgroundColor: "rgba(80,210,255,0.18)", borderColor: "rgba(255,255,255,0.14)" },
+  iconDot: {
+    width: 44,
+    height: 44,
+    borderRadius: 999,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+  },
+  iconDotDanger: {
+    backgroundColor: "rgba(229,9,20,0.20)",
+    borderColor: "rgba(255,255,255,0.14)",
+  },
+  iconDotSoft: {
+    backgroundColor: "rgba(80,210,255,0.18)",
+    borderColor: "rgba(255,255,255,0.14)",
+  },
   iconTxt: { color: soft(0.95), fontWeight: "900", fontSize: 18, marginTop: -1 },
   title: { color: soft(0.95), fontWeight: "900", fontSize: 16 },
   msg: { marginTop: 6, color: soft(0.70), fontWeight: "700", lineHeight: 18 },
   actions: { flexDirection: "row", gap: 10, marginTop: 14 },
-  btn: { flex: 1, height: 46, borderRadius: 14, alignItems: "center", justifyContent: "center", borderWidth: 1, overflow: "hidden" },
-  btnGhost: { backgroundColor: "rgba(255,255,255,0.06)", borderColor: "rgba(255,255,255,0.12)" },
-  btnPrimary: { backgroundColor: "rgba(80,210,255,0.18)", borderColor: "rgba(255,255,255,0.14)" },
-  btnDanger: { backgroundColor: "rgba(229,9,20,0.18)", borderColor: "rgba(255,255,255,0.14)" },
+  btn: {
+    flex: 1,
+    height: 46,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    overflow: "hidden",
+  },
+  btnGhost: {
+    backgroundColor: "rgba(255,255,255,0.06)",
+    borderColor: "rgba(255,255,255,0.12)",
+  },
+  btnPrimary: {
+    backgroundColor: "rgba(80,210,255,0.18)",
+    borderColor: "rgba(255,255,255,0.14)",
+  },
+  btnDanger: {
+    backgroundColor: "rgba(229,9,20,0.18)",
+    borderColor: "rgba(255,255,255,0.14)",
+  },
   btnTxt: { color: soft(0.88), fontWeight: "900" },
   btnTxtStrong: { color: soft(0.95), fontWeight: "900" },
 });
 
 const toastStyles = StyleSheet.create({
   wrap: { flexDirection: "row", gap: 12, alignItems: "center" },
-  badge: { width: 44, height: 44, borderRadius: 14, borderWidth: 1, alignItems: "center", justifyContent: "center" },
-  badgeSuccess: { backgroundColor: "rgba(120,255,160,0.12)", borderColor: "rgba(255,255,255,0.14)" },
-  badgeError: { backgroundColor: "rgba(229,9,20,0.16)", borderColor: "rgba(255,255,255,0.14)" },
-  badgeInfo: { backgroundColor: "rgba(80,210,255,0.14)", borderColor: "rgba(255,255,255,0.14)" },
+  badge: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    borderWidth: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  badgeSuccess: {
+    backgroundColor: "rgba(120,255,160,0.12)",
+    borderColor: "rgba(255,255,255,0.14)",
+  },
+  badgeError: {
+    backgroundColor: "rgba(229,9,20,0.16)",
+    borderColor: "rgba(255,255,255,0.14)",
+  },
+  badgeInfo: {
+    backgroundColor: "rgba(80,210,255,0.14)",
+    borderColor: "rgba(255,255,255,0.14)",
+  },
   badgeTxt: { color: soft(0.95), fontWeight: "900", fontSize: 18, marginTop: -1 },
   title: { color: soft(0.95), fontWeight: "900", fontSize: 16 },
   msg: { marginTop: 4, color: soft(0.70), fontWeight: "700", lineHeight: 18 },
